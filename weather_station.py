@@ -4,9 +4,11 @@ from dataclasses import dataclass
 
 
 @dataclass
-class SolarPanel:
+class WeatherStation:
     device_id: str
-    provided_power: int
+    outside_temperature: float
+    rain_sensor: bool
+    wind_speed: float
     policy_result: bool = False
     broker = "127.0.0.1"
     port = 1883
@@ -36,9 +38,10 @@ class SolarPanel:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.connect(self.broker, self.port)
-        # topic = f"device/{self.device_id}/connected"
-        # payload = {"device_id": self.device_id, "provided_power": self.provided_power}
-        # self.client.publish(topic, json.dumps(payload))
+        topic = f"device/{self.device_id}/connected"
+        payload = {"device_id": self.device_id, "outside_temperature": self.outside_temperature,
+                   "rain_sensor": self.rain_sensor, "wind_speed": self.wind_speed}
+        self.client.publish(topic, json.dumps(payload))
 
     def subscribe(self, topic):
         self.client.subscribe(topic)

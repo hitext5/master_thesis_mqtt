@@ -54,3 +54,9 @@ class ElectronicDevice:
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
+
+    def disconnect(self):
+        topic = f"device/{self.device_id}/disconnected"
+        payload = {"device_id": self.device_id}
+        self.client.publish(topic, json.dumps(payload))
+        self.client.disconnect()

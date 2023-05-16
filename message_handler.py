@@ -9,7 +9,8 @@ from pymongo import MongoClient
 from electronic_device import ElectronicDevice
 from solar_panel import SolarPanel
 
-
+# TODO Only this mqtt client has to be in the user interface project,
+#  the devices should be able to communicate over mqtt
 def eval_policy_solar_panel(requesting_device: ElectronicDevice, solar_panel: SolarPanel, powered_devices):
     total_power = sum(device["work_power"] for device in powered_devices)
     return solar_panel.provided_power >= total_power + requesting_device.work_power
@@ -78,7 +79,7 @@ class MessageHandler:
         # Get the device type over the device id.
         device_type = device_data["device_id"]
         response = requests.post(
-            f"http://localhost:8080/policies/{device_type}",
+            f"http://localhost:8080/check_policies/{device_type}",
             json=device_data
         )
         if response.status_code != 200:
