@@ -56,6 +56,7 @@ while solar_panel.rc != 0:
     time.sleep(1)
 # time.sleep(5)
 
+# In the real world these updates will be done by the devices themselves.
 if washing_machine.turn_on():
     collection.update_one({"device_id": washing_machine.device_id},
                           {"$set": {"powered_by": solar_panel.device_id}})

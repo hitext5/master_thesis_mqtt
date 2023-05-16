@@ -32,6 +32,9 @@ class MessageHandler:
     collection = database["devices"]
 
     def on_connect(self, client, userdata, flags, rc):
+        # When the client successfully connects to the broker, rc will be set to 0.
+        # We have to introduce the rc variable here, because the connection has to be established before
+        # the code continues to run. Not in the real world, but in this simulation.
         self.rc = rc
         if rc == 0:
             print("MessageHandler connected to MQTT Broker!")
@@ -82,12 +85,13 @@ class MessageHandler:
             raise Exception("Error evaluating policy: " + response.text)
         result = response.json()["result"]
         priority = response.json()["priority"]
+        failed_sub_policies = response.json()["failed_sub_policies"]
 
         if result:
             print(f"All policies for the {device_type} are satisfied.")
-        elif priority == "high_priority":
-            print(f"Policies with high priority for the {device_type} are not satisfied.")
-        else:
+        elif priority == "mandatory":
+            print(f"Mandatory policies for the {device_type} are not satisfied.")
+        elif priority == "double_check":
             print(f"Not all policies for the {device_type} are satisfied.")
 
             def no_button():
@@ -101,8 +105,10 @@ class MessageHandler:
             root = tk.Tk()
             root.title("Window")
 
-            label = tk.Label(root, text="A policy was not met, do you still want to proceed?")
-            label.pack(pady=(0, 10))
+            text = f"The following policies for the {device_type} are NOT satisfied. Do you still want to continue? \n" \
+                   + "\n".join(failed_sub_policies)
+            label = tk.Label(root, text=text, wraplength=300)
+            label.pack(fill=tk.X, pady=(0, 10))
 
             frame = tk.Frame(root)
             frame.pack(padx=50)
@@ -114,6 +120,8 @@ class MessageHandler:
             right_button.pack(side=tk.RIGHT)
 
             root.mainloop()
+        else:
+            raise Exception("Unknown priority: " + priority)
 
         # Publish result to the requesting_device
         topic = f"policy_result/{device_type}"
