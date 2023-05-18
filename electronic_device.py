@@ -22,20 +22,33 @@ class ElectronicDevice:
         self.rc = rc
         if rc == 0:
             print(f"{self.device_id.capitalize()} connected to MQTT Broker!")
-            topic = f"policy_result/{self.device_id}"
-            client.subscribe(topic)
+            policy_topic = f"policy_result/{self.device_id}"
+            client.subscribe(policy_topic)
+            client.message_callback_add(policy_topic, self.policy_message)
+            action_topic = f"action/{self.device_id}"
+            client.subscribe(action_topic)
+            client.message_callback_add(action_topic, self.action_message)
         else:
             print("Failed to connect, return code %d\n", rc)
 
     def on_message(self, client, userdata, msg):
-        if msg.payload.decode() == "True":
+        print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
+
+    def policy_message(self, client, userdata, msg):
+        payload = msg.payload.decode()
+        if payload == "True":
             self.policy_result = True
-            self.last_cleaning += 1
             print("Success ElectronicDevice")
         else:
             self.policy_result = False
             print("Failed ElectronicDevice")
         self.event.set()
+
+    def action_message(self, client, userdata, msg):
+        to_do = msg.payload.decode()
+        method = getattr(self, to_do, None)
+        if callable(method):
+            method()
 
     def connect(self):
         self.client.on_connect = self.on_connect

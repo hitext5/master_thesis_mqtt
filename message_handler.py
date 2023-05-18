@@ -9,13 +9,9 @@ from pymongo import MongoClient
 from electronic_device import ElectronicDevice
 from solar_panel import SolarPanel
 
+
 # TODO Only this mqtt client has to be in the user interface project,
 #  the devices should be able to communicate over mqtt
-def eval_policy_solar_panel(requesting_device: ElectronicDevice, solar_panel: SolarPanel, powered_devices):
-    total_power = sum(device["work_power"] for device in powered_devices)
-    return solar_panel.provided_power >= total_power + requesting_device.work_power
-
-
 @dataclass
 class MessageHandler:
     device_id = "message_handler"
@@ -84,9 +80,14 @@ class MessageHandler:
         )
         if response.status_code != 200:
             raise Exception("Error evaluating policy: " + response.text)
+        # Get the result of the policy evaluation as a boolean.
         result = response.json()["result"]
+        # Can be "mandatory", "double_check" or "N/A" (if all policies are satisfied)
         priority = response.json()["priority"]
+        # List of double_check policies that are not satisfied
         failed_sub_policies = response.json()["failed_sub_policies"]
+        # List of actions that have to be executed for the successful policies
+        policy_actions = response.json()["actions"]
 
         if result:
             print(f"All policies for the {device_type} are satisfied.")
@@ -96,9 +97,14 @@ class MessageHandler:
             print(f"Not all policies for the {device_type} are satisfied.")
 
             def no_button():
+                # Clear the list of actions, so that the device does not execute them when the user clicks "No"
+                # because not all policies are satisfied.
+                policy_actions.clear()
                 root.destroy()
 
             def yes_button():
+                # Manually set the result to True, so that the device executes the actions.
+                # User overrules the policy decision.
                 nonlocal result
                 result = True
                 root.destroy()
@@ -125,8 +131,15 @@ class MessageHandler:
             raise Exception("Unknown priority: " + priority)
 
         # Publish result to the requesting_device
-        topic = f"policy_result/{device_type}"
-        client.publish(topic, str(result))
+        policy_topic = f"policy_result/{device_type}"
+        client.publish(policy_topic, str(result))
+
+        # Send actions to devices
+        for action in policy_actions:
+            device = action['device']
+            action_topic = f"action/{device}"
+            payload = action['to_do']
+            client.publish(action_topic, payload)
 
     def clear_db(self):
         self.collection.delete_many({})

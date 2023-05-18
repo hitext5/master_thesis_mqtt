@@ -4,8 +4,11 @@ from pymongo import MongoClient
 
 from electronic_device import ElectronicDevice
 from message_handler import MessageHandler
+from smartphone import Smartphone
 from solar_panel import SolarPanel
+from thermostat import Thermostat
 from weather_station import WeatherStation
+from window import Window
 
 # C:\Program Files\mosquitto
 # mosquitto -v
@@ -69,7 +72,58 @@ def solar_panel_example():
 
 # solar_panel_example()
 
+
 def window_example():
-    weather_station = WeatherStation(device_id="weather_station", outside_temperature=0, rain_sensor=False,
+    message_handler = MessageHandler()
+    weather_station = WeatherStation(device_id="weather_station", temperature=20, rain_sensor=False,
                                      wind_speed=0)
-    pass
+    smartphone = Smartphone(device_id="smartphone", at_home=True)
+    thermostat = Thermostat(device_id="thermostat", temperature=30, air_quality=100, room_id="room1", heater_on=False,
+                            ac_on=True)
+    window = Window(device_id="window", window_open=False, room_id="room1")
+
+    message_handler.connect()
+    message_handler.client.loop_start()
+    print("MessageHandler loop started")
+    while message_handler.rc != 0:
+        time.sleep(1)
+
+    weather_station.connect()
+    weather_station.client.loop_start()
+    print("WeatherStation loop started")
+    while weather_station.rc != 0:
+        time.sleep(1)
+    # time.sleep(5)
+
+    smartphone.connect()
+    smartphone.client.loop_start()
+    print("Smartphone loop started")
+    while smartphone.rc != 0:
+        time.sleep(1)
+    # time.sleep(5)
+
+    thermostat.connect()
+    thermostat.client.loop_start()
+    print("Thermostat loop started")
+    while thermostat.rc != 0:
+        time.sleep(1)
+    # time.sleep(5)
+
+    window.connect()
+    window.client.loop_start()
+    print("Window loop started")
+    while window.rc != 0:
+        time.sleep(1)
+    # time.sleep(5)
+
+    if weather_station.send_sensor_data():
+        collection.update_one({"device_id": window.device_id},
+                              {"$set": {"window_open": True}})
+        collection.update_one(
+            {"device_id": thermostat.device_id},
+            {"$set": {"ac_on": False}}
+        )
+    time.sleep(30)
+
+
+window_example()
