@@ -23,7 +23,7 @@ class WeatherStation:
     def on_connect(self, client, userdata, flags, rc):
         self.rc = rc
         if rc == 0:
-            print("SolarPanel connected to MQTT Broker!")
+            print("WeatherStation connected to MQTT Broker!")
             policy_topic = f"policy_result/{self.device_id}"
             client.subscribe(policy_topic)
             client.message_callback_add(policy_topic, self.policy_message)
@@ -51,7 +51,6 @@ class WeatherStation:
         method = getattr(self, to_do, None)
         if callable(method):
             method()
-
 
     def connect(self):
         self.client.on_connect = self.on_connect

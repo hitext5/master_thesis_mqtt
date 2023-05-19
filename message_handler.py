@@ -96,23 +96,34 @@ class MessageHandler:
         elif priority == "double_check":
             print(f"Not all policies for the {device_type} are satisfied.")
 
-            def no_button():
+            def get_failed_policy_actions(failed_sub_policies):
+                # Make a request to the API to get the actions for the failed policies
+                response = requests.get(f"http://localhost:8080/failed_policy_actions",
+                                        params={"failed_sub_policies": failed_sub_policies,
+                                                "device_type": device_type})
+                # Parse the response and return the actions
+                return response.json()["actions"]
+
+            def yes_button_policy():
+                # Manually set the result to True, so that the device executes the actions.
+                # User overrules the policy decision.
+                nonlocal result
+                result = True
+                # Update the policy_actions list with the actions for the failed policies
+                nonlocal policy_actions
+                policy_actions = get_failed_policy_actions(failed_sub_policies)
+                root.destroy()
+
+            def no_button_policy():
                 # Clear the list of actions, so that the device does not execute them when the user clicks "No"
                 # because not all policies are satisfied.
                 policy_actions.clear()
                 root.destroy()
 
-            def yes_button():
-                # Manually set the result to True, so that the device executes the actions.
-                # User overrules the policy decision.
-                nonlocal result
-                result = True
-                root.destroy()
-
             root = tk.Tk()
             root.title("Window")
 
-            text = f"The following policies for the {device_type} are NOT satisfied. Do you still want to continue? \n" \
+            text = f"The following policies for the {device_type} are NOT satisfied. Do you still want to continue? \n"\
                    + "\n".join(failed_sub_policies)
             label = tk.Label(root, text=text, wraplength=300)
             label.pack(fill=tk.X, pady=(0, 10))
@@ -120,10 +131,10 @@ class MessageHandler:
             frame = tk.Frame(root)
             frame.pack(padx=50)
 
-            left_button = tk.Button(frame, text="Yes", command=yes_button)
+            left_button = tk.Button(frame, text="Yes", command=yes_button_policy)
             left_button.pack(side=tk.LEFT, padx=(0, 5))
 
-            right_button = tk.Button(frame, text="No", command=no_button, bg="blue")
+            right_button = tk.Button(frame, text="No", command=no_button_policy, bg="blue")
             right_button.pack(side=tk.RIGHT)
 
             root.mainloop()
@@ -134,12 +145,64 @@ class MessageHandler:
         policy_topic = f"policy_result/{device_type}"
         client.publish(policy_topic, str(result))
 
-        # Send actions to devices
-        for action in policy_actions:
-            device = action['device']
-            action_topic = f"action/{device}"
-            payload = action['to_do']
-            client.publish(action_topic, payload)
+        # Execute actions if there are any
+        if policy_actions:
+            def yes_button_action(action):
+                # Send action to device because the user clicked "Yes"
+                print(f"action: {action}")
+                device = action['device']
+                action_topic = f"action/{device}"
+                payload = action['to_do']
+                client.publish(action_topic, payload)
+
+            def no_button_action():
+                # Do not send actions to devices because the user clicked "No"
+                root.destroy()
+
+            def execute_all_actions():
+                # Send all actions to devices because the user clicked "Execute all actions" or 30 seconds passed
+                for action in policy_actions:
+                    print(f"action: {action}")
+                    device = action['device']
+                    action_topic = f"action/{device}"
+                    payload = action['to_do']
+                    client.publish(action_topic, payload)
+                root.destroy()
+
+            root = tk.Tk()
+            root.title("Actions")
+
+            label = tk.Label(root, text=f"The following actions got triggered by the {device_type}\n"
+                                        f"Do you want to execute these actions?")
+            label.pack()
+
+            for action in policy_actions:
+                device = action['device']
+                payload = action['to_do']
+                action_frame = tk.Frame(root)
+                action_frame.pack(fill=tk.X)
+                device_label = tk.Label(action_frame, text=device, width=10)
+                device_label.pack(side=tk.LEFT)
+                yes_button = tk.Button(action_frame, text=payload.capitalize().replace('_', ' '),
+                                       command=lambda a=action: yes_button_action(a))
+                yes_button.pack(side=tk.RIGHT, padx=5)
+
+            all_button = tk.Button(root, text="Execute all actions", command=execute_all_actions)
+            all_button.pack()
+
+            button_frame = tk.Frame(root)
+            button_frame.pack()
+
+            no_button = tk.Button(button_frame, text="Close", command=no_button_action)
+            no_button.pack(side=tk.RIGHT)
+
+            # Schedule the execute_all_actions function to be called after 30 seconds
+            root.after(30000, execute_all_actions)
+
+            root.mainloop()
+
+        else:
+            print("No actions to execute.")
 
     def clear_db(self):
         self.collection.delete_many({})

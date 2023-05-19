@@ -78,7 +78,7 @@ def window_example():
     weather_station = WeatherStation(device_id="weather_station", temperature=20, rain_sensor=False,
                                      wind_speed=0)
     smartphone = Smartphone(device_id="smartphone", at_home=True)
-    thermostat = Thermostat(device_id="thermostat", temperature=30, air_quality=100, room_id="room1", heater_on=False,
+    thermostat = Thermostat(device_id="thermostat", temperature=30, air_quality=100, room_id="room1", heating_on=False,
                             ac_on=True)
     window = Window(device_id="window", window_open=False, room_id="room1")
 
@@ -117,13 +117,17 @@ def window_example():
     # time.sleep(5)
 
     if weather_station.send_sensor_data():
-        collection.update_one({"device_id": window.device_id},
-                              {"$set": {"window_open": True}})
-        collection.update_one(
-            {"device_id": thermostat.device_id},
-            {"$set": {"ac_on": False}}
-        )
-    time.sleep(30)
+        # collection.update_one({"device_id": window.device_id},
+        #                       {"$set": {"window_open": True}})
+        # collection.update_one(
+        #     {"device_id": thermostat.device_id},
+        #     {"$set": {"ac_on": False}}
+        # )
+        # collection.update_one(
+        #     {"device_id": thermostat.device_id},
+        #     {"$set": {"heating_on": True}}
+        # )
+        time.sleep(5)
 
 
 window_example()

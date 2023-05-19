@@ -42,6 +42,8 @@ class ElectronicDevice:
         else:
             self.policy_result = False
             print("Failed ElectronicDevice")
+        # After receiving the policy result, the event is set to True to continue
+        # the execution of the program which is the turn_on method
         self.event.set()
 
     def action_message(self, client, userdata, msg):
@@ -62,6 +64,7 @@ class ElectronicDevice:
         topic = f"check_policy/{self.device_id}"
         payload = {"device_id": self.device_id, "work_power": self.work_power, "last_cleaning": self.last_cleaning}
         self.client.publish(topic, json.dumps(payload))
+        # The event is set too False to wait for the policy result (see policy_message method)
         self.event.wait()
         return self.policy_result
 

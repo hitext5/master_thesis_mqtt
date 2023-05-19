@@ -11,7 +11,7 @@ class Thermostat:
     temperature: float
     air_quality: int
     room_id: str
-    heater_on: bool
+    heating_on: bool
     ac_on: bool
     policy_result: bool = False
     broker = "127.0.0.1"
@@ -53,6 +53,8 @@ class Thermostat:
         method = getattr(self, to_do, None)
         if callable(method):
             method()
+        else:
+            print("No method")
 
     def connect(self):
         self.client.on_connect = self.on_connect
@@ -80,3 +82,11 @@ class Thermostat:
     def ac_off(self):
         self.ac_on = False
         print("AC turned off")
+
+    def turn_heating_on(self):
+        self.heating_on = True
+        print("Heating turned on")
+
+    def turn_heating_off(self):
+        self.heating_on = False
+        print("Heating turned off")
