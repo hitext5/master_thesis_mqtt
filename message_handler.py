@@ -74,6 +74,10 @@ class MessageHandler:
         device_data = json.loads(msg.payload)
         # Get the device type over the device id.
         device_type = device_data["device_id"]
+        if "room_id" in device_data:
+            device_location = device_data["room_id"]
+        else:
+            device_location = "N/A"
         response = requests.post(
             f"http://localhost:8080/check_policies/{device_type}",
             json=device_data
@@ -105,25 +109,25 @@ class MessageHandler:
                 return response.json()["actions"]
 
             def yes_button_policy():
-                # Manually set the result to True, so that the device executes the actions.
+                # Manually set the result to True, so that the device executes the actions of the failed policies.
                 # User overrules the policy decision.
                 nonlocal result
                 result = True
                 # Update the policy_actions list with the actions for the failed policies
                 nonlocal policy_actions
-                policy_actions = get_failed_policy_actions(failed_sub_policies)
+                failed_policy_action = get_failed_policy_actions(failed_sub_policies)
+                policy_actions.extend(failed_policy_action)
                 root.destroy()
 
             def no_button_policy():
-                # Clear the list of actions, so that the device does not execute them when the user clicks "No"
-                # because not all policies are satisfied.
-                policy_actions.clear()
+                # Execute only the actions for the successful policies
                 root.destroy()
 
             root = tk.Tk()
-            root.title("Window")
+            root.title("Double-check")
 
-            text = f"The following policies for the {device_type} are NOT satisfied. Do you still want to continue? \n"\
+            text = f"The following policies for the {device_type} are NOT satisfied." \
+                   f" Do you want to manually override this decision? \n" \
                    + "\n".join(failed_sub_policies)
             label = tk.Label(root, text=text, wraplength=300)
             label.pack(fill=tk.X, pady=(0, 10))
@@ -138,6 +142,8 @@ class MessageHandler:
             right_button.pack(side=tk.RIGHT)
 
             root.mainloop()
+        elif priority == "optional":
+            print(f"Optional policies for the {device_type} are not satisfied.")
         else:
             raise Exception("Unknown priority: " + priority)
 
@@ -147,15 +153,19 @@ class MessageHandler:
 
         # Execute actions if there are any
         if policy_actions:
-            def yes_button_action(action):
+            def action_button_action(action, button):
                 # Send action to device because the user clicked "Yes"
                 print(f"action: {action}")
+                button.configure(background='red', state=tk.DISABLED)
                 device = action['device']
-                action_topic = f"action/{device}"
+                if device_location != "N/A":
+                    action_topic = f"action/{device_location}/{device}"
+                else:
+                    action_topic = f"action/{device}"
                 payload = action['to_do']
                 client.publish(action_topic, payload)
 
-            def no_button_action():
+            def close_button_action():
                 # Do not send actions to devices because the user clicked "No"
                 root.destroy()
 
@@ -164,7 +174,10 @@ class MessageHandler:
                 for action in policy_actions:
                     print(f"action: {action}")
                     device = action['device']
-                    action_topic = f"action/{device}"
+                    if device_location != "N/A":
+                        action_topic = f"action/{device_location}/{device}"
+                    else:
+                        action_topic = f"action/{device}"
                     payload = action['to_do']
                     client.publish(action_topic, payload)
                 root.destroy()
@@ -176,16 +189,37 @@ class MessageHandler:
                                         f"Do you want to execute these actions?")
             label.pack()
 
+            mutually_exclusive_actions = []
             for action in policy_actions:
+                device = action['device']
+                payload = action['to_do']
+                # If the action is open or close, it is mutually exclusive with other open/close actions
+                if 'open' in payload or 'close' in payload:
+                    mutually_exclusive_actions.append(action)
+                else:
+                    action_frame = tk.Frame(root)
+                    action_frame.pack(fill=tk.X)
+                    device_label = tk.Label(action_frame, text=device, width=10)
+                    device_label.pack(side=tk.LEFT)
+                    action_button = tk.Button(action_frame, text=payload.capitalize().replace('_', ' '))
+                    action_button.config(command=lambda a=action, b=action_button: action_button_action(a, b))
+                    action_button.pack(side=tk.RIGHT, padx=5)
+
+            # If there are mutually exclusive actions, show them in a separate frame
+            if len(mutually_exclusive_actions) > 1:
+                label = tk.Label(root,
+                                 text="The following actions are mutually exclusive, please select one to continue:")
+                label.pack()
+            for action in mutually_exclusive_actions:
                 device = action['device']
                 payload = action['to_do']
                 action_frame = tk.Frame(root)
                 action_frame.pack(fill=tk.X)
                 device_label = tk.Label(action_frame, text=device, width=10)
                 device_label.pack(side=tk.LEFT)
-                yes_button = tk.Button(action_frame, text=payload.capitalize().replace('_', ' '),
-                                       command=lambda a=action: yes_button_action(a))
-                yes_button.pack(side=tk.RIGHT, padx=5)
+                action_button = tk.Button(action_frame, text=payload.capitalize().replace('_', ' '))
+                action_button.config(command=lambda a=action, b=action_button: action_button_action(a, b))
+                action_button.pack(side=tk.RIGHT, padx=5)
 
             all_button = tk.Button(root, text="Execute all actions", command=execute_all_actions)
             all_button.pack()
@@ -193,8 +227,8 @@ class MessageHandler:
             button_frame = tk.Frame(root)
             button_frame.pack()
 
-            no_button = tk.Button(button_frame, text="Close", command=no_button_action)
-            no_button.pack(side=tk.RIGHT)
+            close_button = tk.Button(button_frame, text="Close", command=close_button_action)
+            close_button.pack(side=tk.RIGHT)
 
             # Schedule the execute_all_actions function to be called after 30 seconds
             root.after(30000, execute_all_actions)

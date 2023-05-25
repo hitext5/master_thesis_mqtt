@@ -71,6 +71,8 @@ class WeatherStation:
         self.client.disconnect()
 
     def send_sensor_data(self):
+        # One method for all possible cases, just the trigger is different (in this virtual scenario the method is
+        # called in the main method but in the real scenario it would be started by, e.g. the rain sensor itself)
         topic = f"check_policy/{self.device_id}"
         payload = {"device_id": self.device_id, "temperature": self.temperature,
                    "rain_sensor": self.rain_sensor, "wind_speed": self.wind_speed}

@@ -9,8 +9,9 @@ from dataclasses import dataclass
 class Thermostat:
     device_id: str
     temperature: float
-    air_quality: int
+    air_quality: float
     room_id: str
+    fan_on: bool
     heating_on: bool
     ac_on: bool
     policy_result: bool = False
@@ -29,9 +30,12 @@ class Thermostat:
             policy_topic = f"policy_result/{self.device_id}"
             client.subscribe(policy_topic)
             client.message_callback_add(policy_topic, self.policy_message)
-            action_topic = f"action/{self.device_id}"
-            client.subscribe(action_topic)
-            client.message_callback_add(action_topic, self.action_message)
+            action_topic_location = f"action/{self.room_id}/{self.device_id}"
+            client.subscribe(action_topic_location)
+            client.message_callback_add(action_topic_location, self.action_message)
+            action_topic_device = f"action/{self.device_id}"
+            client.subscribe(action_topic_device)
+            client.message_callback_add(action_topic_device, self.action_message)
         else:
             print("Failed to connect, return code %d\n", rc)
 
@@ -90,3 +94,22 @@ class Thermostat:
     def turn_heating_off(self):
         self.heating_on = False
         print("Heating turned off")
+
+    def turn_fan_on(self):
+        self.fan_on = True
+        print("Fan turned on")
+
+    def turn_fan_off(self):
+        self.fan_on = False
+        print("Fan turned off")
+
+    def send_current_status(self):
+        # In this virtual scenario the method is called in the main method
+        # but in the real scenario it would be sent every x seconds
+        topic = f"check_policy/{self.device_id}"
+        payload = {"device_id": self.device_id, "temperature": self.temperature,
+                   "air_quality": self.air_quality, "room_id": self.room_id, "fan_on": self.fan_on, "ac_on": self.ac_on,
+                   "heating_on": self.heating_on}
+        self.client.publish(topic, json.dumps(payload))
+        self.event.wait()
+        return self.policy_result
