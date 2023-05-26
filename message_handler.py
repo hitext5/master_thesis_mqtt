@@ -6,9 +6,6 @@ import tkinter as tk
 from dataclasses import dataclass
 from pymongo import MongoClient
 
-from electronic_device import ElectronicDevice
-from solar_panel import SolarPanel
-
 
 # TODO Only this mqtt client has to be in the user interface project,
 #  the devices should be able to communicate over mqtt
@@ -26,7 +23,8 @@ class MessageHandler:
     db_name = 'Cluster0'
     mongo_client = MongoClient(atlas_uri)
     database = mongo_client[db_name]
-    collection = database["devices"]
+    collection_devices = database["devices"]
+    collection_notifications = database["notifications"]
 
     def on_connect(self, client, userdata, flags, rc):
         # When the client successfully connects to the broker, rc will be set to 0.
@@ -62,13 +60,13 @@ class MessageHandler:
         device_data = json.loads(msg.payload)
         print(f"{device_data} connected to the system.")
         # Save device data to database on first connection
-        self.collection.insert_one(device_data)
+        self.collection_devices.insert_one(device_data)
 
     def disconnection_message(self, client, userdata, msg):
         device_data = json.loads(msg.payload)
         print("Device disconnected from the system.")
         # Delete device data from database on disconnection
-        self.collection.delete_one({"mqtt_id": device_data["device_id"]})
+        self.collection_devices.delete_one({"mqtt_id": device_data["device_id"]})
 
     def check_policy_message(self, client, userdata, msg):
         device_data = json.loads(msg.payload)
@@ -92,13 +90,19 @@ class MessageHandler:
         failed_sub_policies = response.json()["failed_sub_policies"]
         # List of actions that have to be executed for the successful policies
         policy_actions = response.json()["actions"]
-
+        # TODO Safe notifications in database
         if result:
-            print(f"All policies for the {device_type} are satisfied.")
+            notification = {"message": f"All policies for the {device_type} are satisfied."}
+            print(notification["message"])
+            self.collection_notifications.insert_one(notification)
         elif priority == "mandatory":
-            print(f"Mandatory policies for the {device_type} are not satisfied.")
+            notification = {"message": f"Mandatory policies for the {device_type} are not satisfied."}
+            print(notification["message"])
+            self.collection_notifications.insert_one(notification)
         elif priority == "double_check":
-            print(f"Not all policies for the {device_type} are satisfied.")
+            notification = {"message": f"Double check policies for the {device_type} are not satisfied."}
+            print(notification["message"])
+            self.collection_notifications.insert_one(notification)
 
             def get_failed_policy_actions(failed_sub_policies):
                 # Make a request to the API to get the actions for the failed policies
@@ -155,7 +159,9 @@ class MessageHandler:
         if policy_actions:
             def action_button_action(action, button):
                 # Send action to device because the user clicked "Yes"
-                print(f"action: {action}")
+                notification = {"message": f"The following action was executed: {action}"}
+                print(notification["message"])
+                self.collection_notifications.insert_one(notification)
                 button.configure(background='red', state=tk.DISABLED)
                 device = action['device']
                 if device_location != "N/A":
@@ -172,7 +178,6 @@ class MessageHandler:
             def execute_all_actions():
                 # Send all actions to devices because the user clicked "Execute all actions" or 30 seconds passed
                 for action in policy_actions:
-                    print(f"action: {action}")
                     device = action['device']
                     if device_location != "N/A":
                         action_topic = f"action/{device_location}/{device}"
@@ -180,6 +185,9 @@ class MessageHandler:
                         action_topic = f"action/{device}"
                     payload = action['to_do']
                     client.publish(action_topic, payload)
+                notification = {"message": f"The following actions were executed: {policy_actions}"}
+                print(notification["message"])
+                self.collection_notifications.insert_one(notification)
                 root.destroy()
 
             root = tk.Tk()
@@ -239,5 +247,5 @@ class MessageHandler:
             print("No actions to execute.")
 
     def clear_db(self):
-        self.collection.delete_many({})
+        self.collection_devices.delete_many({})
         print("Database cleared.")

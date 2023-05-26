@@ -62,12 +62,13 @@ def solar_panel_example():
 
     # In the real world these updates will be done by the devices themselves.
     if washing_machine.turn_on():
-        collection.update_one({"device_id": washing_machine.device_id},
-                              {"$set": {"powered_by": solar_panel.device_id}})
-        collection.update_one(
-            {"device_id": washing_machine.device_id},
-            {"$set": {"last_cleaning": washing_machine.last_cleaning}}
-        )
+        time.sleep(5)
+        # collection.update_one({"device_id": washing_machine.device_id},
+        #                       {"$set": {"powered_by": solar_panel.device_id}})
+        # collection.update_one(
+        #     {"device_id": washing_machine.device_id},
+        #     {"$set": {"last_cleaning": washing_machine.last_cleaning}}
+        # )
 
 
 # solar_panel_example()
