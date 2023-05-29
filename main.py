@@ -1,12 +1,14 @@
 import time
 
+import requests
 from pymongo import MongoClient
 
-from electronic_device import ElectronicDevice
+from Washer import Washer
 from message_handler import MessageHandler
 from smartphone import Smartphone
 from solar_panel import SolarPanel
 from thermostat import Thermostat
+from washing_machine import WashingMachine
 from weather_station import WeatherStation
 from window import Window
 
@@ -25,13 +27,15 @@ db_name = 'Cluster0'
 mongo_client = MongoClient(atlas_uri)
 database = mongo_client[db_name]
 collection = database["devices"]
+message_handler = MessageHandler()
+# Reset the database before running the examples
+message_handler.clear_db()
 
 
 def solar_panel_example():
-    message_handler = MessageHandler()
-    washing_machine = ElectronicDevice(device_id="washing_machine", work_power=400, last_cleaning=4)
-    washer = ElectronicDevice(device_id="washer", work_power=200, last_cleaning=0)
-    solar_panel = SolarPanel(device_id="solar_panel", provided_power=500)
+    washing_machine = WashingMachine(work_power=400, last_cleaning=3)
+    washer = Washer(work_power=200)
+    solar_panel = SolarPanel(provided_power=500)
 
     message_handler.connect()
     message_handler.client.loop_start()
@@ -44,45 +48,37 @@ def solar_panel_example():
     print("Washer loop started")
     while washing_machine.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     washer.connect()
     washer.client.loop_start()
     print("Washing machine loop started")
     while washer.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     solar_panel.connect()
     solar_panel.client.loop_start()
     print("Solar panel loop started")
     while solar_panel.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
-    # In the real world these updates will be done by the devices themselves.
     if washing_machine.turn_on():
         time.sleep(5)
-        # collection.update_one({"device_id": washing_machine.device_id},
-        #                       {"$set": {"powered_by": solar_panel.device_id}})
-        # collection.update_one(
-        #     {"device_id": washing_machine.device_id},
-        #     {"$set": {"last_cleaning": washing_machine.last_cleaning}}
-        # )
 
 
 # solar_panel_example()
 
 
 def window_example():
-    message_handler = MessageHandler()
-    weather_station = WeatherStation(device_id="weather_station", temperature=20, rain_sensor=False,
+    weather_station = WeatherStation(temperature=20, rain_sensor=False,
                                      wind_speed=0)
-    smartphone = Smartphone(device_id="smartphone", at_home=True)
-    thermostat = Thermostat(device_id="thermostat", temperature=30, air_quality=100, room_id="room1", fan_on=False,
+    smartphone = Smartphone(at_home=True)
+    thermostat = Thermostat(temperature=30, air_quality=100, room_id="room1", fan_on=False,
                             heating_on=True, ac_on=False)
-    window = Window(device_id="window", window_open=False, room_id="room1")
-    window2 = Window(device_id="window", window_open=False, room_id="room2")
+    window = Window(window_open=False, room_id="room1")
+    window2 = Window(window_open=False, room_id="room2")
 
     message_handler.connect()
     message_handler.client.loop_start()
@@ -95,48 +91,56 @@ def window_example():
     print("WeatherStation loop started")
     while weather_station.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     smartphone.connect()
     smartphone.client.loop_start()
     print("Smartphone loop started")
     while smartphone.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     thermostat.connect()
     thermostat.client.loop_start()
     print("Thermostat loop started")
     while thermostat.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     window.connect()
     window.client.loop_start()
     print("Window loop started")
     while window.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     window2.connect()
     window2.client.loop_start()
     print("Window2 loop started")
     while window2.rc != 0:
         time.sleep(1)
-    # time.sleep(5)
+    time.sleep(5)
 
     if thermostat.send_current_status():
-        # collection.update_one({"device_id": window.device_id},
-        #                       {"$set": {"window_open": True}})
-        # collection.update_one(
-        #     {"device_id": thermostat.device_id},
-        #     {"$set": {"ac_on": False}}
-        # )
-        # collection.update_one(
-        #     {"device_id": thermostat.device_id},
-        #     {"$set": {"heating_on": True}}
-        # )
         time.sleep(5)
 
 
-window_example()
+# window_example()
+
+# Test to add a policy
+# response = requests.post(
+#     f"http://localhost:8080/add_policy",
+#     json={
+#         "priority": "mandatory",
+#         "actions": [{"device": "window", "to_do": "close_window"}],
+#         "sub_policy_name": "eval_policy_owner_home",
+#         "sub_policy_code":
+#             "return requesting_device['at_home'] and not eval_policy_gas_detected(requesting_device, collection)",
+#         "imports": ["from policies.carbon_monoxide_detector import eval_policy_gas_detected"],
+#         "device_type": "smartphone"
+#     }
+# )
+# print(response.text)
+response = requests.get(
+    f"http://localhost:8080/get_notifications")
+print(response.json())

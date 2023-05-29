@@ -1,13 +1,15 @@
 import json
 import threading
+import uuid
 
 import paho.mqtt.client as mqtt
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class Thermostat:
-    device_id: str
+    device_type = "thermostat"
+    device_id: str = field(init=False)
     temperature: float
     air_quality: float
     room_id: str
@@ -21,19 +23,20 @@ class Thermostat:
     event = threading.Event()
 
     def __post_init__(self):
+        self.device_id = f"{self.device_type}/{str(uuid.uuid4())}"
         self.client = mqtt.Client(client_id=self.device_id)
 
     def on_connect(self, client, userdata, flags, rc):
         self.rc = rc
         if rc == 0:
             print("Thermostat connected to MQTT Broker!")
-            policy_topic = f"policy_result/{self.device_id}"
+            policy_topic = f"policy_result/{self.device_type}"
             client.subscribe(policy_topic)
             client.message_callback_add(policy_topic, self.policy_message)
-            action_topic_location = f"action/{self.room_id}/{self.device_id}"
+            action_topic_location = f"action/{self.room_id}/{self.device_type}"
             client.subscribe(action_topic_location)
             client.message_callback_add(action_topic_location, self.action_message)
-            action_topic_device = f"action/{self.device_id}"
+            action_topic_device = f"action/{self.device_type}"
             client.subscribe(action_topic_device)
             client.message_callback_add(action_topic_device, self.action_message)
         else:
@@ -64,18 +67,18 @@ class Thermostat:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.connect(self.broker, self.port)
-        # topic = f"device/{self.device_id}/connected"
-        # payload = {"device_id": self.device_id, "temperature": self.temperature,
-        #            "ac_on": self.ac_on, "heater_on": self.heater_on, "air_quality": self.air_quality,
-        #            "room_id": self.room_id}
-        # self.client.publish(topic, json.dumps(payload))
+        topic = f"device/{self.device_type}/connected"
+        payload = {"device_type": self.device_type, "device_id": self.device_id, "temperature": self.temperature,
+                   "ac_on": self.ac_on, "heating_on": self.heating_on, "air_quality": self.air_quality,
+                   "room_id": self.room_id}
+        self.client.publish(topic, json.dumps(payload))
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
 
     def disconnect(self):
-        topic = f"device/{self.device_id}/disconnected"
-        payload = {"device_id": self.device_id}
+        topic = f"device/{self.device_type}/disconnected"
+        payload = {"device_type": self.device_type}
         self.client.publish(topic, json.dumps(payload))
         self.client.disconnect()
 
@@ -85,10 +88,32 @@ class Thermostat:
 
     def ac_off(self):
         self.ac_on = False
+        # Create a dictionary with the updated information
+        data = {
+            'client_id': self.device_id,
+            'ac_on': self.ac_on
+        }
+
+        # Convert the dictionary to a JSON string
+        payload = json.dumps(data)
+
+        # Publish the message to the desired topic
+        self.client.publish(f"update_device/{self.device_type}", payload)
         print("AC turned off")
 
     def turn_heating_on(self):
         self.heating_on = True
+        # Create a dictionary with the updated information
+        data = {
+            'client_id': self.device_id,
+            'heating_on': self.heating_on
+        }
+
+        # Convert the dictionary to a JSON string
+        payload = json.dumps(data)
+
+        # Publish the message to the desired topic
+        self.client.publish(f"update_device/{self.device_type}", payload)
         print("Heating turned on")
 
     def turn_heating_off(self):
@@ -97,6 +122,17 @@ class Thermostat:
 
     def turn_fan_on(self):
         self.fan_on = True
+        # Create a dictionary with the updated information
+        data = {
+            'client_id': self.device_id,
+            'fan_on': self.fan_on
+        }
+
+        # Convert the dictionary to a JSON string
+        payload = json.dumps(data)
+
+        # Publish the message to the desired topic
+        self.client.publish(f"update_device/{self.device_type}", payload)
         print("Fan turned on")
 
     def turn_fan_off(self):
@@ -106,8 +142,8 @@ class Thermostat:
     def send_current_status(self):
         # In this virtual scenario the method is called in the main method
         # but in the real scenario it would be sent every x seconds
-        topic = f"check_policy/{self.device_id}"
-        payload = {"device_id": self.device_id, "temperature": self.temperature,
+        topic = f"check_policy/{self.device_type}"
+        payload = {"device_type": self.device_type, "device_id": self.device_id, "temperature": self.temperature,
                    "air_quality": self.air_quality, "room_id": self.room_id, "fan_on": self.fan_on, "ac_on": self.ac_on,
                    "heating_on": self.heating_on}
         self.client.publish(topic, json.dumps(payload))

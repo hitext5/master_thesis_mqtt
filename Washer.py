@@ -1,16 +1,16 @@
 import json
-import threading
 import uuid
 
 import paho.mqtt.client as mqtt
+import threading
 from dataclasses import dataclass, field
 
 
 @dataclass
-class GasValve:
-    device_type = "gas_valve"
+class Washer:
+    device_type = "washer"
     device_id: str = field(init=False)
-    gas_valve_open: bool
+    work_power: int
     policy_result: bool = False
     broker = "127.0.0.1"
     port = 1883
@@ -24,13 +24,13 @@ class GasValve:
     def on_connect(self, client, userdata, flags, rc):
         self.rc = rc
         if rc == 0:
-            print("GasValve connected to MQTT Broker!")
+            print(f"{self.device_id.capitalize()} connected to MQTT Broker!")
             policy_topic = f"policy_result/{self.device_type}"
             client.subscribe(policy_topic)
             client.message_callback_add(policy_topic, self.policy_message)
-            action_topic_device = f"action/{self.device_type}"
-            client.subscribe(action_topic_device)
-            client.message_callback_add(action_topic_device, self.action_message)
+            action_topic = f"action/{self.device_type}"
+            client.subscribe(action_topic)
+            client.message_callback_add(action_topic, self.action_message)
         else:
             print("Failed to connect, return code %d\n", rc)
 
@@ -41,10 +41,23 @@ class GasValve:
         payload = msg.payload.decode()
         if payload == "True":
             self.policy_result = True
-            print("Success Window")
+            # Create a dictionary with the updated information
+            data = {
+                'device_id': self.device_id,
+                'powered_by': "solar_panel"
+            }
+
+            # Convert the dictionary to a JSON string
+            payload = json.dumps(data)
+
+            # Publish the message to the desired topic
+            self.client.publish(f"update_device/{self.device_type}", payload)
+            print("Success ElectronicDevice")
         else:
             self.policy_result = False
-            print("Failed Window")
+            print("Failed ElectronicDevice")
+        # After receiving the policy result, the event is set to True to continue
+        # the execution of the program which is the turn_on method
         self.event.set()
 
     def action_message(self, client, userdata, msg):
@@ -58,8 +71,16 @@ class GasValve:
         self.client.on_message = self.on_message
         self.client.connect(self.broker, self.port)
         topic = f"device/{self.device_type}/connected"
-        payload = {"device_type": self.device_type, "device_id": self.device_id, "gas_valve_open": self.gas_valve_open}
+        payload = {"device_type": self.device_type, "device_id": self.device_id, "work_power": self.work_power}
         self.client.publish(topic, json.dumps(payload))
+
+    def turn_on(self):
+        topic = f"check_policy/{self.device_type}"
+        payload = {"device_type": self.device_type, "work_power": self.work_power}
+        self.client.publish(topic, json.dumps(payload))
+        # The event is set too False to wait for the policy result (see policy_message method)
+        self.event.wait()
+        return self.policy_result
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
@@ -69,11 +90,3 @@ class GasValve:
         payload = {"device_id": self.device_id}
         self.client.publish(topic, json.dumps(payload))
         self.client.disconnect()
-
-    def open_valve(self):
-        self.gas_valve_open = True
-        print("Gas Valve Opened")
-
-    def close_valve(self):
-        self.gas_valve_open = False
-        print("Gas Valve Closed")

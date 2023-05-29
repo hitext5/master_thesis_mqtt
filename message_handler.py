@@ -5,16 +5,17 @@ import tkinter as tk
 
 from dataclasses import dataclass
 from pymongo import MongoClient
+from datetime import datetime
 
 
 # TODO Only this mqtt client has to be in the user interface project,
 #  the devices should be able to communicate over mqtt
 @dataclass
 class MessageHandler:
-    device_id = "message_handler"
+    device_type = "message_handler"
     broker: str = "127.0.0.1"
     port: int = 1883
-    client = mqtt.Client(client_id=device_id)
+    client = mqtt.Client(client_id=device_type)
     rc = 1
     atlas_uri = "mongodb://Kleriakanus:test123@ac-s2miieu-shard-00-00.s0mnged.mongodb.net:27017," \
                 "ac-s2miieu-shard-00-01.s0mnged.mongodb.net:27017," \
@@ -39,6 +40,8 @@ class MessageHandler:
             client.message_callback_add("device/+/connected", self.connection_message)
             client.subscribe("device/+/disconnected")
             client.message_callback_add("device/+/disconnected", self.disconnection_message)
+            client.subscribe("update_device/+")
+            client.message_callback_add("update_device/+", self.update_device_message)
             client.subscribe("check_policy/+")
             client.message_callback_add("check_policy/+", self.check_policy_message)
         else:
@@ -57,6 +60,7 @@ class MessageHandler:
         self.client.subscribe(topic)
 
     def connection_message(self, client, userdata, msg):
+        # Parse the incoming message
         device_data = json.loads(msg.payload)
         print(f"{device_data} connected to the system.")
         # Save device data to database on first connection
@@ -66,12 +70,23 @@ class MessageHandler:
         device_data = json.loads(msg.payload)
         print("Device disconnected from the system.")
         # Delete device data from database on disconnection
-        self.collection_devices.delete_one({"mqtt_id": device_data["device_id"]})
+        self.collection_devices.delete_one({"device_id": device_data["device_id"]})
+
+    def update_device_message(self, client, userdata, msg):
+        data = json.loads(msg.payload)
+        # Extract the relevant information
+        device_id = data.pop('device_id')
+        # Update the MongoDB entry
+        print(data)
+        self.collection_devices.update_one(
+            {'device_id': device_id},
+            {'$set': data}
+        )
 
     def check_policy_message(self, client, userdata, msg):
         device_data = json.loads(msg.payload)
         # Get the device type over the device id.
-        device_type = device_data["device_id"]
+        device_type = device_data["device_type"]
         if "room_id" in device_data:
             device_location = device_data["room_id"]
         else:
@@ -90,17 +105,32 @@ class MessageHandler:
         failed_sub_policies = response.json()["failed_sub_policies"]
         # List of actions that have to be executed for the successful policies
         policy_actions = response.json()["actions"]
-        # TODO Safe notifications in database
+
+        current_time = datetime.now().strftime('%H:%M:%S')
+        current_date = datetime.now().strftime('%Y-%m-%d')
+
         if result:
-            notification = {"message": f"All policies for the {device_type} are satisfied."}
+            notification = {
+                "message": f"All policies for the {device_type} are satisfied.",
+                "time": current_time,
+                "date": current_date
+            }
             print(notification["message"])
             self.collection_notifications.insert_one(notification)
         elif priority == "mandatory":
-            notification = {"message": f"Mandatory policies for the {device_type} are not satisfied."}
+            notification = {
+                "message": f"Mandatory policies for the {device_type} are not satisfied.",
+                "time": current_time,
+                "date": current_date
+            }
             print(notification["message"])
             self.collection_notifications.insert_one(notification)
         elif priority == "double_check":
-            notification = {"message": f"Double check policies for the {device_type} are not satisfied."}
+            notification = {
+                "message": f"Double check policies for the {device_type} are not satisfied.",
+                "time": current_time,
+                "date": current_date
+            }
             print(notification["message"])
             self.collection_notifications.insert_one(notification)
 
@@ -159,7 +189,14 @@ class MessageHandler:
         if policy_actions:
             def action_button_action(action, button):
                 # Send action to device because the user clicked "Yes"
-                notification = {"message": f"The following action was executed: {action}"}
+                current_time = datetime.now().strftime('%H:%M:%S')
+                current_date = datetime.now().strftime('%Y-%m-%d')
+
+                notification = {
+                    "message": f"The following action was executed: {action}",
+                    "time": current_time,
+                    "date": current_date
+                }
                 print(notification["message"])
                 self.collection_notifications.insert_one(notification)
                 button.configure(background='red', state=tk.DISABLED)
@@ -185,7 +222,15 @@ class MessageHandler:
                         action_topic = f"action/{device}"
                     payload = action['to_do']
                     client.publish(action_topic, payload)
-                notification = {"message": f"The following actions were executed: {policy_actions}"}
+                    current_time = datetime.now().strftime('%H:%M:%S')
+                    current_date = datetime.now().strftime('%Y-%m-%d')
+
+                    notification = {
+                        "message": f"The following actions were executed: {policy_actions}",
+                        "time": current_time,
+                        "date": current_date
+                    }
+
                 print(notification["message"])
                 self.collection_notifications.insert_one(notification)
                 root.destroy()

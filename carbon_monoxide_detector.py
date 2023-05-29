@@ -1,13 +1,15 @@
 import json
 import threading
+import uuid
 
 import paho.mqtt.client as mqtt
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
 class CarbonMonoxideDetector:
-    device_id: str
+    device_type = "carbon_monoxide_detector"
+    device_id: str = field(init=False)
     gas_level: float
     room_id: str
     policy_result: bool = False
@@ -17,19 +19,20 @@ class CarbonMonoxideDetector:
     event = threading.Event()
 
     def __post_init__(self):
+        self.device_id = f"{self.device_type}/{str(uuid.uuid4())}"
         self.client = mqtt.Client(client_id=self.device_id)
 
     def on_connect(self, client, userdata, flags, rc):
         self.rc = rc
         if rc == 0:
             print("CarbonMonoxideDetector connected to MQTT Broker!")
-            policy_topic = f"policy_result/{self.device_id}"
+            policy_topic = f"policy_result/{self.device_type}"
             client.subscribe(policy_topic)
             client.message_callback_add(policy_topic, self.policy_message)
-            action_topic_location = f"action/{self.room_id}/{self.device_id}"
+            action_topic_location = f"action/{self.room_id}/{self.device_type}"
             client.subscribe(action_topic_location)
             client.message_callback_add(action_topic_location, self.action_message)
-            action_topic_device = f"action/{self.device_id}"
+            action_topic_device = f"action/{self.device_type}"
             client.subscribe(action_topic_device)
             client.message_callback_add(action_topic_device, self.action_message)
         else:
@@ -58,15 +61,15 @@ class CarbonMonoxideDetector:
         self.client.on_connect = self.on_connect
         self.client.on_message = self.on_message
         self.client.connect(self.broker, self.port)
-        topic = f"device/{self.device_id}/connected"
-        payload = {"device_id": self.device_id, "gas_level": self.gas_level, "room_id": self.room_id}
+        topic = f"device/{self.device_type}/connected"
+        payload = {"device_type": self.device_type, "device_id": self.device_id, "gas_level": self.gas_level, "room_id": self.room_id}
         self.client.publish(topic, json.dumps(payload))
 
     def subscribe(self, topic):
         self.client.subscribe(topic)
 
     def disconnect(self):
-        topic = f"device/{self.device_id}/disconnected"
+        topic = f"device/{self.device_type}/disconnected"
         payload = {"device_id": self.device_id}
         self.client.publish(topic, json.dumps(payload))
         self.client.disconnect()
