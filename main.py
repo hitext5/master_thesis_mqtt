@@ -127,20 +127,34 @@ def window_example():
 
 # window_example()
 
-# Test to add a policy
-# response = requests.post(
-#     f"http://localhost:8080/add_policy",
-#     json={
-#         "priority": "mandatory",
-#         "actions": [{"device": "window", "to_do": "close_window"}],
-#         "sub_policy_name": "eval_policy_owner_home",
-#         "sub_policy_code":
-#             "return requesting_device['at_home'] and not eval_policy_gas_detected(requesting_device, collection)",
-#         "imports": ["from policies.carbon_monoxide_detector import eval_policy_gas_detected"],
-#         "device_type": "smartphone"
-#     }
-# )
-# print(response.text)
+# Test to add a policy and delete it
+def policy_example():
+    response = requests.post(
+        f"http://localhost:8080/add_sub_policy",
+        json={
+            "priority": "mandatory",
+            "actions": [{"device": "window", "to_do": "close_window"}],
+            "sub_policy_name": "eval_policy_owner_home",
+            "sub_policy_code":
+                "return requesting_device['at_home'] and not eval_policy_gas_detected(requesting_device, collection)",
+            "imports": ["from policies.carbon_monoxide_detector import eval_policy_gas_detected"],
+            "device_type": "smartphone"
+        }
+    )
+    print(response.text)
+
+    response = requests.put(
+        f"http://localhost:8080/update_policies/smartphone")
+    print(response.text)
+
+    response = requests.delete(
+        f"http://localhost:8080/delete_sub_policy/local/smartphone/eval_policy_owner_home")
+    print(response.text)
+
+
+# policy_example()
 response = requests.get(
-    f"http://localhost:8080/get_notifications")
+    f"http://localhost:8080/change_sub_policy/community/smartphone/eval_policy_owner_home")
 print(response.json())
+
+
