@@ -1,0 +1,51 @@
+{% extends "old_home.html" %}
+
+
+{% block dashboard_content %}
+<h2 class="mb-5">Delete Thing</h2>
+
+<div class="container-sm dashboard">
+    <div class="row">
+        <div class="col">
+            <div class="row sidebar-row">
+                <div class="col-md-3 menus list-group">
+                {% for label in setups_labels %}
+                <a class="list-group-item list-group-item-action {{ 'active' if setup == label else '' }}"
+                    href="{{ url_for('dashboard.delete') }}/{{label}}">
+                    {{label}}
+                </a>
+                {% endfor %}
+                <hr>
+                </div>
+                
+                <div class="col-md-9 main">
+                <form class="delete-form" method="POST" action="{{url_for('api.delete')}}">
+                    <div>
+                        <div class="form-group">
+                            <select id="thing_id" class="custom-select">
+                                {% for node in setup_nodes %}
+                                    <option value="{{node['thing_id']}}">{{ node["title"] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <button class="btn btn-danger" type="button" id="delete-btn">
+                                Delete
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock dashboard_content %}
+
+
+{% block script %}
+{{ super() }}
+<script src="{{url_for('static', filename='js/delete.js')}}"></script>
+{% endblock script%}

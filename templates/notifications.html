@@ -1,0 +1,29 @@
+{% extends "home.html" %}
+
+
+{% block dashboard_content %}
+
+<h2 class="mb-5 text-center">Notifications</h2>
+
+<table class="table mx-auto" style="display: block;">
+    <thead>
+        <tr>
+            <th>Notificationnumber</th>
+            <th>Content</th>
+            <th>Time</th>
+            <th>Date</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for number, notification in notification_ids.items() %}
+            <tr>
+                <td>{{ number }}</td>
+                <td>{{ notification.content }}</td>
+                <td>{{ notification.time }}</td>
+                <td>{{ notification.date }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% endblock dashboard_content %}

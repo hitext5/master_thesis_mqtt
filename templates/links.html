@@ -1,0 +1,165 @@
+{% extends "layout.html" %}
+
+{% block link %}
+<script type="text/javascript" src="{{ url_for('static', filename='js/neovis.js') }}"></script>
+{% endblock link %}
+
+{% block body %}
+<div class="container-sm dashboard">
+  <div class="row">
+    <div class="col">
+      <div class="row sidebar-row">
+        <div class="col-md-3 menus list-group">
+          {% for label in setup_labels %}
+          <a class="list-group-item list-group-item-action {{ 'active' if setup == label else '' }}"
+            href="{{ url_for('dashboard.links') }}/{{label}}">
+            {{label}}
+          </a>
+          {% endfor %}
+          <hr>
+        </div>
+        
+        <div class="col-md-9 main">
+          <body onload="draw()">
+            <div id="viz"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col" id="node_controller" style="visibility:hidden;">
+      <div class="card">
+      <div id="node_label" class="card-header">
+        Node Selected
+      </div>
+      <div class="btn-group" role="group">
+        <button id="btnGroupDrop1" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Actions
+        </button>
+        <div class="dropdown-menu" id="node_actions" aria-labelledby="btnGroupDrop1">
+        </div>
+      </div>
+      <div class="btn-group" role="group">
+        <button id="btnGroupDrop2" type="button" class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Events
+        </button>
+        <div class="dropdown-menu" id="node_events" aria-labelledby="btnGroupDrop2">
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</br></br>
+  <div class="row mx-auto" id="properties_div" style="visibility:hidden;">
+    <div class="card">
+      <div class="card-header" id="node_header">
+
+      </div>
+      <ul class="list-group list-group-flush" id="node_properties">
+      
+      </ul>
+      <p> Please click on the node again to view the updated status</p>
+    </div>
+  </div>
+</div>
+
+  
+  <!-- Cypher query: <textarea rows="4" cols=50 id="cypher"></textarea><br>
+  <input type="submit" value="Submit" id="reload">
+  <input type="submit" value="Stabilize" id="stabilize"> -->
+  
+  
+</body>
+{% endblock body %}
+
+{% block script %}
+{{ super() }}
+<script
+            src="https://code.jquery.com/jquery-3.2.1.min.js"
+            integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4="
+            crossorigin="anonymous"></script>
+<script type="text/javascript">
+  // define config car
+  // instantiate nodevis object
+  // draw
+  
+  var viz;
+  
+  function draw() {
+    var config = {
+      container_id: "viz",
+      server_url: "bolt://localhost:7687",
+      server_user: "neo4j",
+      server_password: "password",
+      labels: {
+        "ThingDescription": {
+					"caption": "title",
+					"thing_id": "thing_id",
+					"@type": "@type"
+        }
+      },
+      arrows:true,
+      // relationships: {
+      //   [NeoVis.NEOVIS_DEFAULT_CONFIG]: {
+      //       "thickness": "defaultThicknessProperty",
+      //       "caption": "defaultCaption"
+      //   }
+      // 	// "INTERACTS": {
+      // 	// 	"thickness": "weight",
+      // 	// 	"caption": false
+      // 	// }
+      // },
+      initial_cypher: "MATCH (n:{{setup}})<-[rel]-(m:ThingDescription)-[rel1]->(o:ThingDescription) return m, rel1, o"
+    };
+
+    viz = new NeoVis.default(config);
+    viz.render();
+    console.log(viz);
+    viz.registerOnEvent("completed", (e)=>{ 
+        viz["_network"].on("click", (event)=>{ 
+            node = viz._nodes[event.nodes[0]];
+            node_actions = JSON.parse(node.raw.properties.actions);
+            node_events = JSON.parse(node.raw.properties.events);
+            document.getElementById("node_controller").style.visibility = "visible";
+            document.getElementById("node_label").innerHTML = node.raw.properties.title;
+            document.getElementById("node_actions").innerHTML = ""
+            document.getElementById("node_events").innerHTML = ""
+            for(action in node_actions) {
+              var actn = '<a class="dropdown-item" onclick="node_action(`'+ action +'`, `'+ node.raw.properties.thing_id +'`)">'+ action + '</a>'
+              document.getElementById("node_actions").innerHTML += String(actn);
+            }
+            for(event in node_events) {
+              var actn = '<a class="dropdown-item" onclick="simulate_event(`'+ event +'`, `'+ node.raw.properties.thing_id +'`)">'+ event + '</a>'
+              document.getElementById("node_events").innerHTML += String(actn);
+            }
+            document.getElementById("properties_div").style.visibility = "visible";
+            document.getElementById("node_header").innerHTML = ""
+            document.getElementById("node_properties").innerHTML = ""
+            document.getElementById("node_header").innerHTML = node.raw.properties.title + " Properties";
+
+            node_properties = JSON.parse(node.raw.properties["properties"]);
+            properties_to_show = [""]
+            for(property in node_properties) {
+              document.getElementById("node_properties").innerHTML += '<li class="list-group-item">NAME: ' + property + "       STATUS: " + node_properties[property]["status"] + '</li>'
+            }
+        });
+    });
+
+  }
+
+  function node_action(action, thing_id) {
+    var action_url = "{{ url_for('api.action') |safe }}";
+    fetch(action_url + "/" + action + "/" + thing_id, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    }).then(response => {
+      console.log("Success")
+      viz.render();
+    }).catch(response => {
+      console.log("Error")
+      console.log(response)
+    });
+  }
+
+  </script>
+{% endblock script%}

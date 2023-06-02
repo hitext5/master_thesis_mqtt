@@ -1,0 +1,59 @@
+/* Initialization */
+body, html, div, p, ul, li, img, span{
+    margin: 0;
+    padding: 0;
+}
+img {
+    display: block;
+}
+
+.clearfix::after {
+    content: "";
+    clear: both;
+    display: table;
+  }
+
+/* Custom */
+.navbar {
+    height: 100px;
+    box-shadow: 0 0 20px 10px #ccc;
+
+}
+
+.body {
+    margin-top: 150px;
+}
+
+.center-container {
+    display: flex;
+    justify-content: center;
+}
+
+.center-text {
+    text-align: center;
+}
+
+.navbar-nav{
+    margin-left: 200px;
+    padding: 100px;
+}
+
+.nav-item{
+    margin-right: 75px
+}
+
+.dropdown {
+    position: relative;
+}
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    list-style: none;
+}
+
+.dropdown:hover .dropdown-menu {
+    display: block;
+}
