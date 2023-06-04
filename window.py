@@ -13,6 +13,7 @@ class Window:
     window_open: bool
     room_id: str
     policy_result: bool = False
+    possible_actions = ["open_window", "close_window"]
     broker = "127.0.0.1"
     port = 1883
     rc = 1
@@ -63,7 +64,7 @@ class Window:
         self.client.connect(self.broker, self.port)
         topic = f"device/{self.device_type}/connected"
         payload = {"device_type": self.device_type, "device_id": self.device_id, "window_open": self.window_open,
-                   "room_id": self.room_id}
+                   "room_id": self.room_id, "possible_actions": self.possible_actions}
         self.client.publish(topic, json.dumps(payload))
 
     def subscribe(self, topic):

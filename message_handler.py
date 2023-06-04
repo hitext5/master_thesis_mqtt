@@ -102,7 +102,7 @@ class MessageHandler:
         # Can be "mandatory", "double_check" or "N/A" (if all policies are satisfied)
         priority = response.json()["priority"]
         # List of double_check policies that are not satisfied
-        failed_sub_policies = response.json()["failed_sub_policies"]
+        failed_double_check = response.json()["failed_double_check"]
         # List of actions that have to be executed for the successful policies
         policy_actions = response.json()["actions"]
 
@@ -115,7 +115,6 @@ class MessageHandler:
                 "time": current_time,
                 "date": current_date
             }
-            print(notification["message"])
             self.collection_notifications.insert_one(notification)
         elif priority == "mandatory":
             notification = {
@@ -123,7 +122,6 @@ class MessageHandler:
                 "time": current_time,
                 "date": current_date
             }
-            print(notification["message"])
             self.collection_notifications.insert_one(notification)
         elif priority == "double_check":
             notification = {
@@ -131,13 +129,12 @@ class MessageHandler:
                 "time": current_time,
                 "date": current_date
             }
-            print(notification["message"])
             self.collection_notifications.insert_one(notification)
 
-            def get_failed_policy_actions(failed_sub_policies):
+            def get_failed_policy_actions(failed_double_check):
                 # Make a request to the API to get the actions for the failed policies
                 response = requests.get(f"http://localhost:8080/failed_policy_actions",
-                                        params={"failed_sub_policies": failed_sub_policies,
+                                        params={"failed_double_check": failed_double_check,
                                                 "device_type": device_type})
                 # Parse the response and return the actions
                 return response.json()["actions"]
@@ -149,7 +146,7 @@ class MessageHandler:
                 result = True
                 # Update the policy_actions list with the actions for the failed policies
                 nonlocal policy_actions
-                failed_policy_action = get_failed_policy_actions(failed_sub_policies)
+                failed_policy_action = get_failed_policy_actions(failed_double_check)
                 policy_actions.extend(failed_policy_action)
                 root.destroy()
 
@@ -162,7 +159,7 @@ class MessageHandler:
 
             text = f"The following policies for the {device_type} are NOT satisfied." \
                    f" Do you want to manually override this decision? \n" \
-                   + "\n".join(failed_sub_policies)
+                   + "\n".join(failed_double_check)
             label = tk.Label(root, text=text, wraplength=300)
             label.pack(fill=tk.X, pady=(0, 10))
 
@@ -177,7 +174,12 @@ class MessageHandler:
 
             root.mainloop()
         elif priority == "optional":
-            print(f"Optional policies for the {device_type} are not satisfied.")
+            notification = {
+                "message": f"Optional policies for the {device_type} are not satisfied.",
+                "time": current_time,
+                "date": current_date
+            }
+            self.collection_notifications.insert_one(notification)
         else:
             raise Exception("Unknown priority: " + priority)
 

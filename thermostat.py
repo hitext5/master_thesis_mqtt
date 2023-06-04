@@ -16,6 +16,8 @@ class Thermostat:
     fan_on: bool
     heating_on: bool
     ac_on: bool
+    possible_actions = ["turn_on_fan", "turn_off_fan", "turn_on_heating", "turn_off_heating",
+                        "turn_on_ac", "turn_off_ac"]
     policy_result: bool = False
     broker = "127.0.0.1"
     port = 1883
@@ -70,7 +72,7 @@ class Thermostat:
         topic = f"device/{self.device_type}/connected"
         payload = {"device_type": self.device_type, "device_id": self.device_id, "temperature": self.temperature,
                    "ac_on": self.ac_on, "heating_on": self.heating_on, "air_quality": self.air_quality,
-                   "room_id": self.room_id}
+                   "room_id": self.room_id, "possible_actions": self.possible_actions, "fan_on": self.fan_on}
         self.client.publish(topic, json.dumps(payload))
 
     def subscribe(self, topic):

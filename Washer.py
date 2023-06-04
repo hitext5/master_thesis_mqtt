@@ -12,6 +12,7 @@ class Washer:
     device_id: str = field(init=False)
     work_power: int
     policy_result: bool = False
+    machine_on: bool = False
     broker = "127.0.0.1"
     port = 1883
     rc = 1
@@ -41,6 +42,7 @@ class Washer:
         payload = msg.payload.decode()
         if payload == "True":
             self.policy_result = True
+            self.machine_on = True
             # Create a dictionary with the updated information
             data = {
                 'device_id': self.device_id,
@@ -71,7 +73,8 @@ class Washer:
         self.client.on_message = self.on_message
         self.client.connect(self.broker, self.port)
         topic = f"device/{self.device_type}/connected"
-        payload = {"device_type": self.device_type, "device_id": self.device_id, "work_power": self.work_power}
+        payload = {"device_type": self.device_type, "device_id": self.device_id, "work_power": self.work_power,
+                   "machine_on": self.machine_on}
         self.client.publish(topic, json.dumps(payload))
 
     def turn_on(self):

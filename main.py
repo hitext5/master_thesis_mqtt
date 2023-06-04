@@ -1,5 +1,5 @@
 from pymongo import MongoClient
-from flask import Flask, Blueprint, render_template
+from flask import Flask, render_template
 
 from message_handler import MessageHandler
 
@@ -16,12 +16,11 @@ policies_collection = database['policies']
 thing_collection = database['things']
 collection_notifications = database["notifications"]
 message_handler = MessageHandler()
+app = Flask(__name__)
 
-dashboard = Blueprint('dashboard', __name__)
 
-
-@dashboard.route('/')
-@dashboard.route('/home')
+@app.route('/')
+@app.route('/home')
 def home():
     """
     Render the home page for the 'dashboard' module
@@ -30,7 +29,7 @@ def home():
     return render_template("homescreen.html", tagname='home')
 
 
-@dashboard.route('/policylist')
+@app.route('/policylist')
 def policylist():
     """
     List of objects
@@ -41,11 +40,5 @@ def policylist():
     return render_template('policylist.html', tagname='policylist', policies_ids=policies_ids)
 
 
-def main():
-    app = Flask(__name__)
-    app.register_blueprint(dashboard, url_prefix='/')
-    app.run()
-
-
 if __name__ == "__main__":
-    main()
+    app.run()

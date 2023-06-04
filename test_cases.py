@@ -147,9 +147,9 @@ def policy_example():
 # print(response.json())
 
 
-# response = requests.get(
-#     f"http://localhost:8080/get_notifications")
-# print(response.json())
+response = requests.get(
+    f"http://localhost:8080/get_possible_actions/thermostat")
+print(response.json())
 
 # response = requests.delete(
 #     f"http://localhost:8080/delete_sub_policy/local/smartphone/eval_policy_owner_home")

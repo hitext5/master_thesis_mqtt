@@ -12,6 +12,7 @@ class WashingMachine:
     device_id: str = field(init=False)
     work_power: int
     last_cleaning: int
+    machine_on: bool = False
     policy_result: bool = False
     broker = "127.0.0.1"
     port = 1883
@@ -43,10 +44,11 @@ class WashingMachine:
         if payload == "True":
             self.last_cleaning += 1
             self.policy_result = True
+            self.machine_on = True
             # Create a dictionary with the updated information
             data = {
                 'device_id': self.device_id,
-                'powered_by': "solar_panel", 'last_cleaning': self.last_cleaning
+                'powered_by': "solar_panel", 'last_cleaning': self.last_cleaning, 'machine_on': self.machine_on
             }
 
             # Convert the dictionary to a JSON string
@@ -54,10 +56,10 @@ class WashingMachine:
 
             # Publish the message to the desired topic
             self.client.publish(f"update_device/{self.device_type}", payload)
-            print("Success ElectronicDevice")
+            print("Success WashingMachine")
         else:
             self.policy_result = False
-            print("Failed ElectronicDevice")
+            print("Failed WashingMachine")
         # After receiving the policy result, the event is set to True to continue
         # the execution of the program which is the turn_on method
         self.event.set()
@@ -74,7 +76,7 @@ class WashingMachine:
         self.client.connect(self.broker, self.port)
         topic = f"device/{self.device_type}/connected"
         payload = {"device_type": self.device_type, "device_id": self.device_id, "work_power": self.work_power,
-                   "last_cleaning": self.last_cleaning}
+                   "last_cleaning": self.last_cleaning, "machine_on": self.machine_on}
         self.client.publish(topic, json.dumps(payload))
 
     def turn_on(self):
