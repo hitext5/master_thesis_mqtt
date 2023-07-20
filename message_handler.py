@@ -8,8 +8,6 @@ from pymongo import MongoClient
 from datetime import datetime
 
 
-# TODO Only this mqtt client has to be in the user interface project,
-#  the devices should be able to communicate over mqtt
 @dataclass
 class MessageHandler:
     device_type = "message_handler"
@@ -45,7 +43,7 @@ class MessageHandler:
             client.subscribe("check_policy/+")
             client.message_callback_add("check_policy/+", self.check_policy_message)
         else:
-            print("Failed to connect, return code %d\n", rc)
+            print("Failed to connect, return code %d\n" % rc)
         pass
 
     def on_message(self, client, userdata, msg):
@@ -109,7 +107,7 @@ class MessageHandler:
         current_time = datetime.now().strftime('%H:%M:%S')
         current_date = datetime.now().strftime('%Y-%m-%d')
 
-        if result:
+        if priority == "N/A":
             notification = {
                 "message": f"All policies for the {device_type} are satisfied.",
                 "time": current_time,
@@ -136,6 +134,8 @@ class MessageHandler:
                 response = requests.get(f"http://localhost:8080/failed_policy_actions",
                                         params={"failed_double_check": failed_double_check,
                                                 "device_type": device_type})
+                if response.status_code != 200:
+                    raise Exception("Error in getting the failed policies: " + response.text)
                 # Parse the response and return the actions
                 return response.json()["actions"]
 
@@ -217,6 +217,8 @@ class MessageHandler:
             def execute_all_actions():
                 # Send all actions to devices because the user clicked "Execute all actions" or 30 seconds passed
                 for action in policy_actions:
+                    if action in mutually_exclusive_actions:
+                        continue
                     device = action['device']
                     if device_location != "N/A":
                         action_topic = f"action/{device_location}/{device}"
@@ -282,8 +284,10 @@ class MessageHandler:
             button_frame = tk.Frame(root)
             button_frame.pack()
 
-            close_button = tk.Button(button_frame, text="Close", command=close_button_action)
-            close_button.pack(side=tk.RIGHT)
+            close_button = tk.Button(button_frame, text="Confirm", command=close_button_action)
+            close_button.pack(side=tk.RIGHT, padx=5)
+            confirm_button = tk.Button(button_frame, text="Close", command=close_button_action)
+            confirm_button.pack(side=tk.RIGHT, padx=5)
 
             # Schedule the execute_all_actions function to be called after 30 seconds
             root.after(30000, execute_all_actions)

@@ -36,7 +36,7 @@ class CarbonMonoxideDetector:
             client.subscribe(action_topic_device)
             client.message_callback_add(action_topic_device, self.action_message)
         else:
-            print("Failed to connect, return code %d\n", rc)
+            print("Failed to connect, return code %d\n" % rc)
 
     def on_message(self, client, userdata, msg):
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")

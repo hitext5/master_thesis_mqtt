@@ -26,7 +26,7 @@ class SolarPanel:
             topic = f"policy_result/{self.device_type}"
             client.subscribe(topic)
         else:
-            print("Failed to connect, return code %d\n", rc)
+            print("Failed to connect, return code %d\n" % rc)
 
     def on_message(self, client, userdata, msg):
         if msg.payload.decode():

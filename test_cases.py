@@ -18,12 +18,14 @@ from window import Window
 # Run mosquitto -v in a terminal to see the messages being sent and received.
 
 message_handler = MessageHandler()
+
+
 # Reset the database before running the examples
 # message_handler.clear_db()
 
 
-def solar_panel_example():
-    washing_machine = WashingMachine(work_power=400, last_cleaning=3)
+def test_solar_panel_example():
+    washing_machine = WashingMachine(work_power=400, last_cleaning=6)
     washer = Washer(work_power=200)
     solar_panel = SolarPanel(provided_power=500)
 
@@ -54,18 +56,17 @@ def solar_panel_example():
         time.sleep(1)
     time.sleep(5)
 
-    if washing_machine.turn_on():
-        time.sleep(5)
+    assert washing_machine.turn_on()
 
 
 # solar_panel_example()
 
 
-def window_example():
+def test_window_example():
     weather_station = WeatherStation(temperature=20, rain_sensor=False,
                                      wind_speed=0)
     smartphone = Smartphone(at_home=True)
-    thermostat = Thermostat(temperature=30, air_quality=100, room_id="room1", fan_on=False,
+    thermostat = Thermostat(temperature=30, air_quality=110, room_id="room1", fan_on=False,
                             heating_on=True, ac_on=False)
     window = Window(window_open=True, room_id="room1")
     window2 = Window(window_open=True, room_id="room2")
@@ -111,50 +112,74 @@ def window_example():
         time.sleep(1)
     time.sleep(5)
 
-    if thermostat.send_current_status():
-        time.sleep(5)
+    assert thermostat.send_current_status()
 
 
 # window_example()
 
 # Test to add a policy and delete it
-def policy_example():
-    response = requests.post(
-        f"http://localhost:8080/add_sub_policy",
-        json={
-            "priority": "mandatory",
-            "actions": [{"device": "window", "to_do": "close_window"}],
-            "sub_policy_name": "eval_policy_owner_home",
-            "sub_policy_code":
-                "return requesting_device['at_home'] and not eval_policy_gas_detected(requesting_device, collection)",
-            "imports": ["from policies.carbon_monoxide_detector import eval_policy_gas_detected"],
-            "device_type": "smartphone"
-        }
-    )
-    print(response.text)
-
-    response = requests.put(
-        f"http://localhost:8080/update_policies/smartphone")
-    print(response.text)
-
-    response = requests.delete(
-        f"http://localhost:8080/delete_sub_policy/local/smartphone/eval_policy_owner_home")
-    print(response.text)
-
+# def policy_example():
+#     response = requests.post(
+#         f"http://localhost:8080/add_policy",
+#         json={
+#             "priority": "mandatory",
+#             "actions": [{'device': 'window', 'to_do': 'open_window'},
+#                         {'device': 'gas_valve', 'to_do': 'turn_off'}],
+#             "policy_name": "test",
+#             "policy_code": "def eval_policy_gas_detected(requesting_device, collection):"
+#                                "return requesting_device['gas_level'] > 30",
+#             "imports": [],
+#             "device_type": "carbon_monoxide_detector"
+#         }
+#     )
+#
+#     print(response.text)
+#
+#
 # policy_example()
+#
 # response = requests.get(
-#     f"http://localhost:8080/change_sub_policy/community/smartphone/eval_policy_owner_home")
-# print(response.json())
-
-
-response = requests.get(
-    f"http://localhost:8080/get_possible_actions/thermostat")
-print(response.json())
-
-# response = requests.delete(
-#     f"http://localhost:8080/delete_sub_policy/local/smartphone/eval_policy_owner_home")
+#     f"http://localhost:8080/get_policies/local/carbon_monoxide_detector")
 # print(response.text)
 #
 # response = requests.get(
-#     f"http://localhost:8080/get_sub_policies/local/smartphone")
+#     f"http://localhost:8080/pending_new_policies/carbon_monoxide_detector")
+# print(response.text)
+#
+# response = requests.put(
+#     f"http://localhost:8080/update_policies/carbon_monoxide_detector")
+# print(response.text)
+#
+# response = requests.get(
+#     f"http://localhost:8080/get_policies/local/carbon_monoxide_detector")
+# print(response.text)
+
+# response = requests.delete(
+#     f"http://localhost:8080/delete_policy/local/smartphone/eval_policy_owner_home")
+# print(response.text)
+
+# policy_example()
+
+# response = requests.post(
+#     f"http://localhost:8080/share_policy/thermostat/eval_policy_ac_on")
+# print(response.text)
+
+# response = requests.post(
+#     f"http://localhost:8080/add_policy_from_db/community/thermostat/eval_policy_ac_on")
+# print(response.text)
+
+# response = requests.get(
+#     f"http://localhost:8080/get_devices")
+# print(response.json())
+#
+# response = requests.delete(
+#     f"http://localhost:8080/delete_policy/local/carbon_monoxide_detector/eval_policy_gas_detected")
+# print(response.text)
+#
+# response = requests.get(
+#     f"http://localhost:8080/change_policy/local/thermostat/eval_policy_ac_on")
+# print(response.json())
+#
+# response = requests.post(
+#     f"http://localhost:8080/share_policy/thermostat/eval_policy_ac_on")
 # print(response.text)

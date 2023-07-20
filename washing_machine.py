@@ -34,7 +34,7 @@ class WashingMachine:
             client.subscribe(action_topic)
             client.message_callback_add(action_topic, self.action_message)
         else:
-            print("Failed to connect, return code %d\n", rc)
+            print("Failed to connect, return code %d\n" % rc)
 
     def on_message(self, client, userdata, msg):
         print(f"Received `{msg.payload.decode()}` from `{msg.topic}` topic")
