@@ -217,8 +217,6 @@ class MessageHandler:
             def execute_all_actions():
                 # Send all actions to devices because the user clicked "Execute all actions" or 30 seconds passed
                 for action in policy_actions:
-                    if action in mutually_exclusive_actions:
-                        continue
                     device = action['device']
                     if device_location != "N/A":
                         action_topic = f"action/{device_location}/{device}"

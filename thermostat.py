@@ -9,7 +9,8 @@ from dataclasses import dataclass, field
 @dataclass
 class Thermostat:
     device_type = "thermostat"
-    device_id: str = field(init=False)
+    #device_id: str = field(init=False)
+    device_id: str
     temperature: float
     air_quality: float
     room_id: str
@@ -23,10 +24,11 @@ class Thermostat:
     port = 1883
     rc = 1
     event = threading.Event()
+    client = mqtt.Client(client_id=f"{device_type}/{str(uuid.uuid4())}")
 
-    def __post_init__(self):
-        self.device_id = f"{self.device_type}/{str(uuid.uuid4())}"
-        self.client = mqtt.Client(client_id=self.device_id)
+    # def __post_init__(self):
+    #     self.device_id = f"{self.device_type}/{str(uuid.uuid4())}"
+    #     self.client = mqtt.Client(client_id=self.device_id)
 
     def on_connect(self, client, userdata, flags, rc):
         self.rc = rc

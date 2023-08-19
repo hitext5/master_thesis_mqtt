@@ -21,7 +21,7 @@ message_handler = MessageHandler()
 
 
 # Reset the database before running the examples
-# message_handler.clear_db()
+message_handler.clear_db()
 
 
 def test_solar_panel_example():
@@ -66,10 +66,10 @@ def test_window_example():
     weather_station = WeatherStation(temperature=20, rain_sensor=False,
                                      wind_speed=0)
     smartphone = Smartphone(at_home=True)
-    thermostat = Thermostat(temperature=30, air_quality=110, room_id="room1", fan_on=False,
+    thermostat = Thermostat(device_id="thermostat_bathroom", temperature=30, air_quality=110, room_id="bathroom", fan_on=False,
                             heating_on=True, ac_on=False)
-    window = Window(window_open=True, room_id="room1")
-    window2 = Window(window_open=True, room_id="room2")
+    window = Window(window_open=True, room_id="bathroom")
+    window2 = Window(window_open=True, room_id="kitchen")
 
     message_handler.connect()
     message_handler.client.loop_start()
@@ -113,7 +113,6 @@ def test_window_example():
     time.sleep(5)
 
     assert thermostat.send_current_status()
-
 
 # window_example()
 
