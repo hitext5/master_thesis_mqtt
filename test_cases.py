@@ -19,7 +19,6 @@ from window import Window
 
 message_handler = MessageHandler()
 
-
 # Reset the database before running the examples
 message_handler.clear_db()
 
@@ -66,7 +65,8 @@ def test_window_example():
     weather_station = WeatherStation(temperature=20, rain_sensor=False,
                                      wind_speed=0)
     smartphone = Smartphone(at_home=True)
-    thermostat = Thermostat(device_id="thermostat_bathroom", temperature=30, air_quality=110, room_id="bathroom", fan_on=False,
+    thermostat = Thermostat(device_id="thermostat_bathroom", temperature=30, air_quality=110, room_id="bathroom",
+                            fan_on=False,
                             heating_on=True, ac_on=False)
     window = Window(window_open=True, room_id="bathroom")
     window2 = Window(window_open=True, room_id="kitchen")
@@ -114,6 +114,7 @@ def test_window_example():
 
     assert thermostat.send_current_status()
 
+
 # window_example()
 
 # Test to add a policy and delete it
@@ -137,9 +138,11 @@ def test_window_example():
 #
 # policy_example()
 #
-# response = requests.get(
-#     f"http://localhost:8080/get_policies/local/carbon_monoxide_detector")
-# print(response.text)
+
+def test_get():
+    response = requests.get(
+        f"http://localhost:8080/get_policies/local/carbon_monoxide_detector")
+    print(response.text)
 #
 # response = requests.get(
 #     f"http://localhost:8080/pending_new_policies/carbon_monoxide_detector")
